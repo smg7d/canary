@@ -13,7 +13,8 @@ def getData():
     subreddit = reddit.subreddit("ProgrammerHumor")
 
     for submission in subreddit.hot(limit=10):
-        print(f'''id is {submission.id}, title is {submission.title}, author is {submission.author},
+        print(f'''
+        id is {submission.id}, title is {submission.title}, author is {submission.author},
         score is {submission.score}, time created is {submission.created_utc}, url is {submission.url}, 
         and number of comments is {submission.num_comments} and name is {submission.name}''')
 
