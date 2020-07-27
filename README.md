@@ -1,0 +1,11 @@
+# to do list
+- get a basic praw call working
+- create a sql database, correctly modeled
+- create pipeline to populate training dataset
+- examine the dataset
+- determine how to predict hot risers
+- monitor new posts for hot risers
+- change db model to only work off MRU
+- send twilio text with post to phone
+- expand beyond 1-2 subreddits
+- write a blog post about it
