@@ -1,5 +1,5 @@
 # to do list
-- get a basic praw call working
+- get a basic praw call working (done!)
 - create a sql database, correctly modeled
 - create pipeline to populate training dataset
 - examine the dataset

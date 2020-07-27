@@ -10,12 +10,12 @@ def getData():
     client_secret=credentials["clientSecret"],
     user_agent=user_agent)
 
-    for submission in reddit.subreddit("learnpython").hot(limit=10):
-        print(submission.title)
+    subreddit = reddit.subreddit("ProgrammerHumor")
 
-    # headers = {"Authorization": f"bearer {getToken()}", "User-Agent": "canaryScanner by verykarmamuchreddit"}
-    # response = requests.get("https://oauth.reddit.com/api/v1/me", headers=headers)
-    # print(response.json())
+    for submission in subreddit.hot(limit=10):
+        print(f'''id is {submission.id}, title is {submission.title}, author is {submission.author},
+        score is {submission.score}, time created is {submission.created_utc}, url is {submission.url}, 
+        and number of comments is {submission.num_comments} and name is {submission.name}''')
 
 
 if __name__ == "__main__":
