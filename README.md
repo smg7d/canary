@@ -1,6 +1,9 @@
 # to do list
 - get a basic praw call working (done!)
 - create a sql database, correctly modeled
+    -create a regular database for posts, post scores
+    -create a table for comments, comment scores
+    -create a transitive closure table
 - create pipeline to populate training dataset
 - examine the dataset
 - determine how to predict hot risers

@@ -1,77 +1,89 @@
 import sqlite3
 from sqlite3 import Error
-from peewee import * 
-from playhouse.sqlite_ext import *
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey 
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
 
-db = SqliteDatabase('canary.db')
-db.load_extension('./closure')
+# this file creates the tables, declares the objects for the orm
+# and provides an interface for the pipeline file to create, read,
+# update, and delete
 
-class Posts(Model):
-    postId = CharField(primary_key=True)
-    title = CharField()
-    subreddit = CharField()
-    created_utc = BigIntegerField()
-    author = CharField()
+engine = create_engine('sqlite:///canary.db', echo=False)
+Base = declarative_base()
+Session = sessionmaker(bind=engine)
+session = Session()
 
-    class Meta:
-        database = db
-
-
-class PostScores(Model):
-    postId = ForeignKeyField(Posts, backref='postScores')
-    score = IntegerField()
-    age = IntegerField()
-    numberOfComments = IntegerField()
-
-    class Meta:
-        database = db
-
-class Comments(Model):
-    commentId = CharField(primary_key=True)
-    parentId = ForeignKeyField('self', null=True, backref='children')
-    level = IntegerField()
-    author = CharField()
-    postId = ForeignKeyField(Posts, backref='comments')
-    created_utc = BigIntegerField()
-    edited = BooleanField()
-
-    class Meta:
-        database = db
-
-CommentsClosure = ClosureTable(Comments)
-
-class CommentScores(Model):
-    commentId = ForeignKeyField(Comments, backref='commentScores')
-    score = IntegerField()
-    age = IntegerField()
-
-# Create the tables if they do not exist already
+class Post(Base):
+    __tablename__ = 'posts'
+    postId = Column(String, primary_key=True)
+    title = Column(String)
+    subreddit = Column(String)
+    created = Column(Integer)
+    author = Column(String)
 
 
-def createConnection(dbFile):
-    conn = None
-    try:
-        conn = sqlite3.connect(dbFile)
-        return conn
-    except Error as e:
-        print(e)
+class PostScores(Base):
+    __tablename__ = 'postScores'
+
+    id = Column(Integer, primary_key=True)
+    postId = Column(String, ForeignKey('posts.postId'))
+    score = Column(Integer)
+    age = Column(Integer)
+    numberOfComments = Column(Integer)
+
+    post = relationship("Post", back_populates="postScores")
+
+Post.postScores = relationship("PostScores", order_by=PostScores.id, back_populates="post")
+
+Base.metadata.create_all(engine)
+
+
+# class Comments(Base):
+#     __tablename__ = 'comments'
+
+#     commentId = Column(String, primary_key=True)
+#     parentId = ForeignKeyField('self', null=True, backref='children')
+#     level = IntegerField()
+#     author = CharField()
+#     postId = ForeignKeyField(Posts, backref='comments')
+#     created_utc = BigIntegerField()
+#     edited = BooleanField()
+
+
+# class CommentScores(Base):
+#     __tablename__ = 'commentScores'
+
+#     commentId = ForeignKeyField(Comments, backref='commentScores')
+#     score = IntegerField()
+#     age = IntegerField()
+
+# # Create the tables if they do not exist already
+
+
+# def createConnection(dbFile):
+#     conn = None
+#     try:
+#         conn = sqlite3.connect(dbFile)
+#         return conn
+#     except Error as e:
+#         print(e)
     
-    return conn
+#     return conn
 
-def createTable(conn, sqlStatement):
-    try:
-        c = conn.cursor()
-        c.execute(sqlStatement)
-    except Error as e:
-        print(e)
+# def createTable(conn, sqlStatement):
+#     try:
+#         c = conn.cursor()
+#         c.execute(sqlStatement)
+#     except Error as e:
+#         print(e)
 
 
-if __name__ == '__main__':
-    Posts.create_table(True)
-    PostScores.create_table(True)
-    Comments.create_table(True)
-    CommentsClosure.create_table(True)
-    CommentScores.create_table(True)
+# if __name__ == '__main__':
+#     Posts.create_table(True)
+#     PostScores.create_table(True)
+#     Comments.create_table(True)
+#     CommentsClosure.create_table(True)
+#     CommentScores.create_table(True)
     # conn = createConnection(r'/Users/shane/computer/projects/redditBot/canary.db')
 
     # createPostTable = ''' CREATE TABLE IF NOT EXISTS posts (
