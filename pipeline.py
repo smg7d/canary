@@ -4,14 +4,15 @@ import time
 from authenticate import getToken
 import praw
 from secret import credentials
-from database import Post, PostScores, session
+from database import Post, PostScores, Comments, CommentScores, session
 
 user_agent = "canaryScanner by verykarmamuchreddit"
 
-def addNewPosts(subredditName):
-    reddit = praw.Reddit(client_id=credentials["clientId"],
+reddit = praw.Reddit(client_id=credentials["clientId"],
     client_secret=credentials["clientSecret"],
     user_agent=user_agent)
+
+def addNewPosts(subredditName):
 
     subreddit = reddit.subreddit(subredditName)
 
@@ -20,7 +21,8 @@ def addNewPosts(subredditName):
     
     for submission in subreddit.new(limit=100):
         if submission.id not in existingPosts:
-            post = Post(postId=submission.id, title=submission.title, subreddit=submission.subreddit.display_name, created=int(submission.created_utc), author=submission.author.name)
+            post = Post(postId=submission.id, title=submission.title, subreddit=submission.subreddit.display_name, 
+            created=int(submission.created_utc), author=submission.author.name)
             newPosts.append(post)
 
     session.add_all(newPosts)
@@ -28,9 +30,6 @@ def addNewPosts(subredditName):
     print(f"added {len(newPosts)} new posts")
 
 def addPostScores():
-    reddit = praw.Reddit(client_id=credentials["clientId"],
-    client_secret=credentials["clientSecret"],
-    user_agent=user_agent)
 
     existingPosts = [p for p in session.query(Post)]
 
@@ -41,27 +40,53 @@ def addPostScores():
 
         if count > 0:
             postScoreTime = existingPost.postScores[count - 1].age + existingPost.created
-            print(f"now is {now} and time is {postScoreTime}, diff is {now - postScoreTime}")
             if (now - postScoreTime > 5*60) and (now - existingPost.created < 60*60*24):
-                submission = reddit.submission(id=existingPost.postId)
-                age = now - submission.created_utc
-                currentPostScore = PostScores(postId=existingPost.postId, score=submission.score, 
-                age=age, numberOfComments=submission.num_comments)
+                post = reddit.submission(id=existingPost.postId)
+                age = now - post.created_utc
+                currentPostScore = PostScores(postId=existingPost.postId, score=post.score, 
+                age=age, numberOfComments=post.num_comments)
                 existingPost.postScores.append(currentPostScore)
                 session.add(existingPost)
-                print(f"post is old, title is {submission.title}")
+                print(f"updating score for {post.title}")
         else:
-            submission = reddit.submission(id=existingPost.postId)
-            age = now - submission.created_utc
-            currentPostScore = PostScores(postId=existingPost.postId, score=submission.score, 
-            age=age, numberOfComments=submission.num_comments)
+            post = reddit.submission(id=existingPost.postId)
+            age = now - post.created_utc
+            currentPostScore = PostScores(postId=existingPost.postId, score=post.score, 
+            age=age, numberOfComments=post.num_comments)
             existingPost.postScores.append(currentPostScore)
             session.add(existingPost)
-            print(f"post is new, title is {submission.title}")
+            print(f"initial score for {post.title}")
 
     session.commit()
 
+def addNewComments():
+    now = int(datetime.now(tz=timezone.utc).timestamp())
+    commentsAdded = 0
+    existingPosts = [p for p in session.query(Post)]
+    for existingPost in existingPosts:
+        if (now - existingPost.created) < 5*60*24*3:
+            existingComments = [com.commentId for com in session.query(Comments).filter(Comments.postId==existingPost.postId)]
+            
+            post = reddit.submission(id=existingPost.postId)
+            comments = post.comments
+            commentList = comments.list()
 
+            levelMap = {}
+            for comment in commentList:
+                if comment not in existingComments:
+                    parentId = comment.parent_id[3:] #trim off prefix of t1_ or t3_
+                    levelMap[comment.id] = levelMap.get(parentId, 0) + 1
+
+                    newComment = Comments(commentId=comment.id, parentId=parentId, level=levelMap[comment.id], 
+                    author=comment.author.name, postId=comment.submission, created=int(comment.created_utc), edited=bool(comment.edited))
+
+                    existingPost.comments.append(newComment)
+                    commentsAdded += 1
+                
+            session.add(existingPost)
+            
+    session.commit()
+    print(f"{commentsAdded} comments added")
 
 def commentExploring():
     reddit = praw.Reddit(client_id=credentials["clientId"],
@@ -100,4 +125,5 @@ if __name__ == "__main__":
     # quick()
     addNewPosts("ProgrammerHumor")
     addPostScores()
-    
+    addNewComments()
+    # # commentExploring()
