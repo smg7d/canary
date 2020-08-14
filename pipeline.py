@@ -62,11 +62,14 @@ def addPostScores():
 def addNewComments():
     now = int(datetime.now(tz=timezone.utc).timestamp())
     commentsAdded = 0
+
     existingPosts = [p for p in session.query(Post)]
     for existingPost in existingPosts:
         if (now - existingPost.created) < 5*60*24*3:
+
             existingComments = [com.commentId for com in session.query(Comments).filter(Comments.postId==existingPost.postId)]
-            
+            #issue delete from comments closures table where postId = postId statement here
+
             post = reddit.submission(id=existingPost.postId)
             comments = post.comments
             commentList = comments.list()
@@ -77,11 +80,23 @@ def addNewComments():
                     parentId = comment.parent_id[3:] #trim off prefix of t1_ or t3_
                     levelMap[comment.id] = levelMap.get(parentId, 0) + 1
 
+                    #this is lazy nonetype reference handling. don't judge.
+                    author = "" if comment.author is None else comment.author.name 
+
                     newComment = Comments(commentId=comment.id, parentId=parentId, level=levelMap[comment.id], 
-                    author=comment.author.name, postId=comment.submission, created=int(comment.created_utc), edited=bool(comment.edited))
+                    author=author, postId=comment.submission, created=int(comment.created_utc), edited=bool(comment.edited))
 
                     existingPost.comments.append(newComment)
                     commentsAdded += 1
+                
+                #logic to add to closure table goes here
+                '''to add a comment to a closure table, the commentId is the starting point.
+                get the parent Id
+                while the parentId is not null
+                create a new childId parentId combo item
+                move the parentId up to the next comment in the tree (call to database)
+                '''
+
                 
             session.add(existingPost)
             
@@ -127,3 +142,15 @@ if __name__ == "__main__":
     addPostScores()
     addNewComments()
     # # commentExploring()
+
+
+    '''to add a comment to a closure table, the commentId is the starting point.
+    get the parent Id
+    while the parentId is not null
+    create a new childId parentId combo item
+    move the parentId up to the next comment in the tree (call to database)
+
+    drop the items in the closure table related to that post at the start and rebuild when it's called
+
+
+    '''

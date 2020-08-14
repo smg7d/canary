@@ -44,6 +44,12 @@ class Comments(Base):
 
     post = relationship("Post", back_populates="comments")
 
+class CommentsClosure(Base):
+    __tablename__ = 'commentsClosure'
+    id = Column(Integer, primary_key=True)
+    parentId = Column(String)
+    childId = Column(String)
+    postId = Column(String, ForeignKey('comments.postId'))
 
 class CommentScores(Base):
     __tablename__ = 'commentScores'
