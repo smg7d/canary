@@ -51,6 +51,8 @@ class CommentsClosure(Base):
     childId = Column(String)
     postId = Column(String, ForeignKey('comments.postId'))
 
+    
+
 class CommentScores(Base):
     __tablename__ = 'commentScores'
 

@@ -95,6 +95,11 @@ def addNewComments():
                 while the parentId is not null
                 create a new childId parentId combo item
                 move the parentId up to the next comment in the tree (call to database)
+
+                implemented through a many to many table relationship. each comment gets its parent from the 
+                db and add the parent/child relationship to its closure object, which also affects the parents closure
+                object since it's a many to many relationship. it moves to the parents parent while the parent is not null
+                and repeats the process.
                 '''
 
                 
