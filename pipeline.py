@@ -68,7 +68,9 @@ def addNewComments():
         if (now - existingPost.created) < 60*60*24:
 
             existingComments = [com.commentId for com in session.query(Comments).filter(Comments.postId==existingPost.postId)]
+            
             #issue delete from comments closures table where postId = postId statement here
+
 
             post = reddit.submission(id=existingPost.postId)
             post.comments.replace_more(limit=None)
@@ -97,8 +99,15 @@ def addNewComments():
                 existingComment = session.query(Comments).filter(Comments.commentId == comment.id).one()
                 while(parentId != existingComment.postId):
                     newCommentClosure = CommentsClosure(parentId=parentId, childId=existingComment.commentId, postId=existingComment.postId)
-                    existingComment.commentsClosures.append(newCommentClosure)
-
+                    
+                    isInClosureAlready = False
+                    for dClosure in existingComment.commentsClosures:
+                        if dClosure.parentId == newCommentClosure.parentId and dClosure.childId == newCommentClosure.childId:
+                            isInClosureAlready = True
+                    
+                    if not isInClosureAlready:
+                        existingComment.commentsClosures.append(newCommentClosure)
+                    
                     parentComment = session.query(Comments).filter(Comments.commentId == parentId).one()
                     if parentComment is None:
                         break
@@ -164,10 +173,14 @@ def monitoring():
     #on error text error hit
     pass
 
-if __name__ == "__main__":
-    # quick()
-    addNewPosts("ProgrammerHumor")
+def runUpdate(subreddit):
+    addNewPosts(subreddit)
     addPostScores()
     addNewComments()
     addCommentScores()
-    # commentExploring()
+
+if __name__ == "__main__":
+    # quick()
+    runUpdate("ProgrammerHumor")
+    
+
