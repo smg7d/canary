@@ -4,7 +4,7 @@ import time
 from authenticate import getToken
 import praw
 from secret import credentials
-from database import Post, PostScores, Comments, CommentScores, session
+from database import Post, PostScores, Comments, CommentsClosure, CommentScores, session
 
 user_agent = "canaryScanner by verykarmamuchreddit"
 
@@ -90,19 +90,20 @@ def addNewComments():
                     commentsAdded += 1
                 
                 #logic to add to closure table goes here
-                '''to add a comment to a closure table, the commentId is the starting point.
-                get the parent Id
-                while the parentId is not null
-                create a new childId parentId combo item
-                move the parentId up to the next comment in the tree (call to database)
+                parentId = comment.parent_id[3:] #starts at the existing parent
+                existingComment = session.query(Comments).filter(Comments.commentId == comment.id).one()
+                while(parentId != existingComment.postId):
+                    newCommentClosure = CommentsClosure(parentId=parentId, childId=existingComment.commentId, postId=existingComment.postId)
+                    existingComment.commentsClosures.append(newCommentClosure)
 
-                implemented through a many to many table relationship. each comment gets its parent from the 
-                db and add the parent/child relationship to its closure object, which also affects the parents closure
-                object since it's a many to many relationship. it moves to the parents parent while the parent is not null
-                and repeats the process.
-                '''
+                    parentComment = session.query(Comments).filter(Comments.commentId == parentId).one()
+                    if parentComment is None:
+                        break
 
-                
+                    parentId = parentComment.parentId
+
+                session.add(existingComment)
+               
             session.add(existingPost)
             
     session.commit()

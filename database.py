@@ -43,6 +43,8 @@ class Comments(Base):
     edited = Column(Boolean)
 
     post = relationship("Post", back_populates="comments")
+    closures = relationship("CommentsClosure", back_populates="comments")
+
 
 class CommentsClosure(Base):
     __tablename__ = 'commentsClosure'
@@ -51,7 +53,6 @@ class CommentsClosure(Base):
     childId = Column(String)
     postId = Column(String, ForeignKey('comments.postId'))
 
-    
 
 class CommentScores(Base):
     __tablename__ = 'commentScores'
@@ -66,5 +67,7 @@ class CommentScores(Base):
 Post.postScores = relationship("PostScores", order_by=PostScores.id, back_populates="post")
 Post.comments = relationship("Comments", order_by=Comments.created, back_populates="post" )
 Comments.commentScores = relationship("CommentScores", order_by=CommentScores.id, back_populates="comment")
+Comments.commentsClosures = relationship("CommentsClosure", order_by=CommentsClosure.id, back_populates="comments")
+CommentsClosure.comments = relationship("Comments", order_by=Comments.commentId, back_populates="commentsClosures")
 
 Base.metadata.create_all(engine)
