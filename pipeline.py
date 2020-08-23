@@ -65,14 +65,14 @@ def addNewComments():
 
     existingPosts = [p for p in session.query(Post)]
     for existingPost in existingPosts:
-        if (now - existingPost.created) < 5*60*24*3:
+        if (now - existingPost.created) < 60*60*24:
 
             existingComments = [com.commentId for com in session.query(Comments).filter(Comments.postId==existingPost.postId)]
             #issue delete from comments closures table where postId = postId statement here
 
             post = reddit.submission(id=existingPost.postId)
-            comments = post.comments
-            commentList = comments.list()
+            post.comments.replace_more(limit=None)
+            commentList = post.comments.list()
 
             levelMap = {}
             for comment in commentList:
@@ -81,7 +81,10 @@ def addNewComments():
                     levelMap[comment.id] = levelMap.get(parentId, 0) + 1
 
                     #this is lazy nonetype reference handling. don't judge.
-                    author = "" if comment.author is None else comment.author.name 
+                    try:
+                        author = "" if comment.author is None else comment.author.name 
+                    except:
+                        author = ""
 
                     newComment = Comments(commentId=comment.id, parentId=parentId, level=levelMap[comment.id], commentText=comment.body,
                     author=author, postId=comment.submission, created=int(comment.created_utc), edited=bool(comment.edited))
@@ -120,46 +123,24 @@ def addCommentScores():
         if count > 0:
             commentScoreTime = existingComment.commentScores[count - 1].age + existingComment.created
             if (now - commentScoreTime > 5*60) and (now - existingComment.created < 60*60*24):
-                #get comment
-                #create new commentScore object with comment properties
-                #append it to the comment
-                
-                post = reddit.submission(id=existingPost.postId)
-                age = now - post.created_utc
-                currentPostScore = PostScores(postId=existingPost.postId, score=post.score, 
-                age=age, numberOfComments=post.num_comments)
-                existingPost.postScores.append(currentPostScore)
-                session.add(existingPost)
-                print(f"updating score for {post.title}")
+                feedComment = reddit.comment(id=existingComment.commentId)
+                age = now - existingComment.created
+                newCommentScore = CommentScores(commentId=existingComment.commentId, score=feedComment.score, 
+                age=age)
+                existingComment.commentScores.append(newCommentScore)
+                session.add(existingComment)
+                print(f"updating score for {existingComment.commentId}")
         else:
-            post = reddit.submission(id=existingPost.postId)
-            age = now - post.created_utc
-            currentPostScore = PostScores(postId=existingPost.postId, score=post.score, 
-            age=age, numberOfComments=post.num_comments)
-            existingPost.postScores.append(currentPostScore)
-            session.add(existingPost)
-            print(f"initial score for {post.title}")
+            feedComment = reddit.comment(id=existingComment.commentId)
+            age = now - existingComment.created
+            newCommentScore = CommentScores(commentId=existingComment.commentId, score=feedComment.score, 
+            age=age)
+            existingComment.commentScores.append(newCommentScore)
+            session.add(existingComment)
+            print(f"initial score for {existingComment.commentId}")
 
     session.commit()
 
-def commentExploring():
-    reddit = praw.Reddit(client_id=credentials["clientId"],
-    client_secret=credentials["clientSecret"],
-    user_agent=user_agent)
-
-    post = reddit.submission(id="hzhttx")
-    comments = post.comments
-    print(post.title)
-
-    levelMap = {}
-    for comment in comments.list():
-        parentId = comment.parent_id[3:] #trim off prefix of t1_ or t3_
-        levelMap[comment.id] = levelMap.get(parentId, 0) + 1
-        
-        print(f'''
-        some attributes are author: {comment.author}, id: {comment.id}, text: {comment.body},
-        parentId: {parentId}, postId: {comment.submission}, level: {levelMap[comment.id]}
-        created: {comment.created_utc}, edited: {comment.edited}, and score: {comment.score}''')
 
 def quick():
     # begin = int(datetime.now(tz=timezone.utc).timestamp())
@@ -170,8 +151,8 @@ def quick():
     client_secret=credentials["clientSecret"],
     user_agent=user_agent)
 
-    submission = reddit.submission(id="i6uv3u")
-    print(submission)
+    submission = reddit.comment(id="g1dpr0t")
+    print(submission.score)
 
 #need to find out how to get comment Id, parent comment Id
 
@@ -184,8 +165,9 @@ def monitoring():
     pass
 
 if __name__ == "__main__":
-    quick()
-    # addNewPosts("ProgrammerHumor")
-    # addPostScores()
-    # addNewComments()
+    # quick()
+    addNewPosts("ProgrammerHumor")
+    addPostScores()
+    addNewComments()
+    addCommentScores()
     # commentExploring()
