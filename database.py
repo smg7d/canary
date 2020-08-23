@@ -41,6 +41,7 @@ class Comments(Base):
     postId = Column(String, ForeignKey('posts.postId'))
     created = Column(Integer)
     edited = Column(Boolean)
+    commentText = Column(String)
 
     post = relationship("Post", back_populates="comments")
     closures = relationship("CommentsClosure", back_populates="comments")

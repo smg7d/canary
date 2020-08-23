@@ -83,7 +83,7 @@ def addNewComments():
                     #this is lazy nonetype reference handling. don't judge.
                     author = "" if comment.author is None else comment.author.name 
 
-                    newComment = Comments(commentId=comment.id, parentId=parentId, level=levelMap[comment.id], 
+                    newComment = Comments(commentId=comment.id, parentId=parentId, level=levelMap[comment.id], commentText=comment.body,
                     author=author, postId=comment.submission, created=int(comment.created_utc), edited=bool(comment.edited))
 
                     existingPost.comments.append(newComment)
@@ -109,6 +109,39 @@ def addNewComments():
     session.commit()
     print(f"{commentsAdded} comments added")
 
+def addCommentScores():
+    existingComments = session.query(Comments).all()
+
+    #get a list of posts
+    for existingComment in existingComments:
+        now = int(datetime.now(tz=timezone.utc).timestamp())
+        count = len(existingComment.commentScores)
+
+        if count > 0:
+            commentScoreTime = existingComment.commentScores[count - 1].age + existingComment.created
+            if (now - commentScoreTime > 5*60) and (now - existingComment.created < 60*60*24):
+                #get comment
+                #create new commentScore object with comment properties
+                #append it to the comment
+                
+                post = reddit.submission(id=existingPost.postId)
+                age = now - post.created_utc
+                currentPostScore = PostScores(postId=existingPost.postId, score=post.score, 
+                age=age, numberOfComments=post.num_comments)
+                existingPost.postScores.append(currentPostScore)
+                session.add(existingPost)
+                print(f"updating score for {post.title}")
+        else:
+            post = reddit.submission(id=existingPost.postId)
+            age = now - post.created_utc
+            currentPostScore = PostScores(postId=existingPost.postId, score=post.score, 
+            age=age, numberOfComments=post.num_comments)
+            existingPost.postScores.append(currentPostScore)
+            session.add(existingPost)
+            print(f"initial score for {post.title}")
+
+    session.commit()
+
 def commentExploring():
     reddit = praw.Reddit(client_id=credentials["clientId"],
     client_secret=credentials["clientSecret"],
@@ -124,7 +157,7 @@ def commentExploring():
         levelMap[comment.id] = levelMap.get(parentId, 0) + 1
         
         print(f'''
-        some attributes are author: {comment.author}, id: {comment.id},
+        some attributes are author: {comment.author}, id: {comment.id}, text: {comment.body},
         parentId: {parentId}, postId: {comment.submission}, level: {levelMap[comment.id]}
         created: {comment.created_utc}, edited: {comment.edited}, and score: {comment.score}''')
 
@@ -138,25 +171,21 @@ def quick():
     user_agent=user_agent)
 
     submission = reddit.submission(id="i6uv3u")
-    print(submission.title)
+    print(submission)
 
 #need to find out how to get comment Id, parent comment Id
 
+def monitoring():
+    #os.path.getsize("canary.db")
+
+    #texts number of posts and comments added, as well as file size of database
+
+    #on error text error hit
+    pass
+
 if __name__ == "__main__":
-    # quick()
-    addNewPosts("ProgrammerHumor")
-    addPostScores()
-    addNewComments()
-    # # commentExploring()
-
-
-    '''to add a comment to a closure table, the commentId is the starting point.
-    get the parent Id
-    while the parentId is not null
-    create a new childId parentId combo item
-    move the parentId up to the next comment in the tree (call to database)
-
-    drop the items in the closure table related to that post at the start and rebuild when it's called
-
-
-    '''
+    quick()
+    # addNewPosts("ProgrammerHumor")
+    # addPostScores()
+    # addNewComments()
+    # commentExploring()
