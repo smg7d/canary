@@ -29,9 +29,9 @@ def addNewPosts(subredditName):
     session.commit()
     print(f"added {len(newPosts)} new posts")
 
-def addPostScores():
+def addPostScores(subredditName):
 
-    existingPosts = [p for p in session.query(Post)]
+    existingPosts = [p for p in session.query(Post).filter(Post.subreddit==subredditName)]
 
     #get a list of posts
     for existingPost in existingPosts:
@@ -59,19 +59,16 @@ def addPostScores():
 
     session.commit()
 
-def addNewComments():
+def addNewComments(subredditName):
     now = int(datetime.now(tz=timezone.utc).timestamp())
     commentsAdded = 0
 
-    existingPosts = [p for p in session.query(Post)]
+    existingPosts = [p for p in session.query(Post).filter(Post.subreddit==subredditName)]
     for existingPost in existingPosts:
         if (now - existingPost.created) < 60*60*24:
 
             existingComments = [com.commentId for com in session.query(Comments).filter(Comments.postId==existingPost.postId)]
-            
-            #issue delete from comments closures table where postId = postId statement here
-
-
+        
             post = reddit.submission(id=existingPost.postId)
             post.comments.replace_more(limit=None)
             commentList = post.comments.list()
@@ -121,8 +118,8 @@ def addNewComments():
     session.commit()
     print(f"{commentsAdded} comments added")
 
-def addCommentScores():
-    existingComments = session.query(Comments).all()
+def addCommentScores(subredditName):
+    existingComments = session.query(Comments).join(Comments.post).filter(Post.subreddit==subredditName).all()
 
     #get a list of posts
     for existingComment in existingComments:
@@ -175,9 +172,9 @@ def monitoring():
 
 def runUpdate(subreddit):
     addNewPosts(subreddit)
-    addPostScores()
-    addNewComments()
-    addCommentScores()
+    addPostScores(subreddit)
+    addNewComments(subreddit)
+    addCommentScores(subreddit)
 
 if __name__ == "__main__":
     # quick()
