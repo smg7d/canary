@@ -1,10 +1,11 @@
-import requests
+import requests, praw, time, logging
 from datetime import timezone, datetime
-import time
 from authenticate import getToken
-import praw
 from secret import credentials
-from database import Post, PostScores, Comments, CommentsClosure, CommentScores, session
+from database import Post, PostScores, Comments, CommentsClosure, CommentScores, getSession
+
+format = "%(asctime)s: %(message)s"
+logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
 user_agent = "canaryScanner by verykarmamuchreddit"
 
@@ -12,7 +13,7 @@ reddit = praw.Reddit(client_id=credentials["clientId"],
     client_secret=credentials["clientSecret"],
     user_agent=user_agent)
 
-def addNewPosts(subredditName):
+def addNewPosts(subredditName, session):
 
     subreddit = reddit.subreddit(subredditName)
 
@@ -27,9 +28,9 @@ def addNewPosts(subredditName):
 
     session.add_all(newPosts)
     session.commit()
-    print(f"added {len(newPosts)} new posts")
+    logging.info(f"{subredditName}: added {len(newPosts)} new posts")
 
-def addPostScores(subredditName):
+def addPostScores(subredditName, session):
 
     existingPosts = [p for p in session.query(Post).filter(Post.subreddit==subredditName)]
 
@@ -47,7 +48,7 @@ def addPostScores(subredditName):
                 age=age, numberOfComments=post.num_comments)
                 existingPost.postScores.append(currentPostScore)
                 session.add(existingPost)
-                print(f"updating score for {post.title}")
+                logging.info(f"{subredditName}: updating score for {post.title}")
         else:
             post = reddit.submission(id=existingPost.postId)
             age = now - post.created_utc
@@ -55,11 +56,11 @@ def addPostScores(subredditName):
             age=age, numberOfComments=post.num_comments)
             existingPost.postScores.append(currentPostScore)
             session.add(existingPost)
-            print(f"initial score for {post.title}")
+            logging.info(f"{subredditName}: initial score for {post.title}")
 
     session.commit()
 
-def addNewComments(subredditName):
+def addNewComments(subredditName, session):
     now = int(datetime.now(tz=timezone.utc).timestamp())
     commentsAdded = 0
 
@@ -116,9 +117,9 @@ def addNewComments(subredditName):
             session.add(existingPost)
             
     session.commit()
-    print(f"{commentsAdded} comments added")
+    logging.info(f"{subredditName}: {commentsAdded} comments added")
 
-def addCommentScores(subredditName):
+def addCommentScores(subredditName, session):
     existingComments = session.query(Comments).join(Comments.post).filter(Post.subreddit==subredditName).all()
 
     #get a list of posts
@@ -135,7 +136,8 @@ def addCommentScores(subredditName):
                 age=age)
                 existingComment.commentScores.append(newCommentScore)
                 session.add(existingComment)
-                print(f"updating score for {existingComment.commentId}")
+                logging.info(f"{subredditName}: updating score for {existingComment.commentId}")
+
         else:
             feedComment = reddit.comment(id=existingComment.commentId)
             age = now - existingComment.created
@@ -143,7 +145,7 @@ def addCommentScores(subredditName):
             age=age)
             existingComment.commentScores.append(newCommentScore)
             session.add(existingComment)
-            print(f"initial score for {existingComment.commentId}")
+            logging.info(f"{subredditName}: initial score for {existingComment.commentId}")
 
     session.commit()
 
@@ -170,11 +172,11 @@ def monitoring():
     #on error text error hit
     pass
 
-def runUpdate(subreddit):
-    addNewPosts(subreddit)
-    addPostScores(subreddit)
-    addNewComments(subreddit)
-    addCommentScores(subreddit)
+def runUpdate(subreddit, session):
+    addNewPosts(subreddit, session)
+    addPostScores(subreddit, session)
+    addNewComments(subreddit, session)
+    addCommentScores(subreddit, session)
 
 if __name__ == "__main__":
     # quick()

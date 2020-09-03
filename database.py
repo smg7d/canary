@@ -10,6 +10,13 @@ Base = declarative_base()
 Session = sessionmaker(bind=engine)
 session = Session()
 
+def getSession():
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    return session
+
+
 class Post(Base):
     __tablename__ = 'posts'
     postId = Column(String, primary_key=True)
