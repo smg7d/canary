@@ -41,7 +41,7 @@ def addPostScores(subredditName, session):
 
         if count > 0:
             postScoreTime = existingPost.postScores[count - 1].age + existingPost.created
-            if (now - postScoreTime > 5*60) and (now - existingPost.created < 60*60*24):
+            if (now - postScoreTime > 10*60) and (now - existingPost.created < 60*60*24):
                 post = reddit.submission(id=existingPost.postId)
                 age = now - post.created_utc
                 currentPostScore = PostScores(postId=existingPost.postId, score=post.score, 
@@ -129,7 +129,7 @@ def addCommentScores(subredditName, session):
 
         if count > 0:
             commentScoreTime = existingComment.commentScores[count - 1].age + existingComment.created
-            if (now - commentScoreTime > 5*60) and (now - existingComment.created < 60*60*24):
+            if (now - commentScoreTime > 10*60) and (now - existingComment.created < 60*60*24):
                 feedComment = reddit.comment(id=existingComment.commentId)
                 age = now - existingComment.created
                 newCommentScore = CommentScores(commentId=existingComment.commentId, score=feedComment.score, 

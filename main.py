@@ -7,35 +7,18 @@
 6. add to aws
 7. execute
 '''
-
 from pipeline import runUpdate
-import threading
-import time
-import logging
 from database import getSession
-
-def threadedRunUpdate(subredditName, session):
-    logging.info(f"Now updating {subredditName}: starting")
-    runUpdate(subredditName, session)
-    logging.info(f"Now updating {subredditName}: finishing")
+import time
 
 if __name__ == "__main__":
-    format = "%(asctime)s: %(message)s"
-    logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+    session = getSession()
+    while True:
+        runUpdate("ProgrammerHumor", session)
+        runUpdate("AskReddit", session)
+        runUpdate("csCareerQuestions", session)
+        time.sleep(60*5)
 
-    threads = list()
-    subreddits = ['ProgrammerHumor', 'OMSCS']
-    for sr in subreddits:
-        logging.info("Main    : before run thread")
-        session = getSession()
-        x = threading.Thread(target=threadedRunUpdate, args=(sr, session,))
-        threads.append(x)
-        x.start()
-
-    for index, thread in enumerate(threads):
-        logging.info("Main    : before joining thread %d.", index)
-        thread.join()
-        logging.info("Main    : thread %d done", index)
 
 
 
